@@ -525,7 +525,7 @@ fn draw_text(
         Align::Center => -text_h / 2.0,
         Align::Above => -text_h + pad - 1.0,
         Align::BaselineLeft | Align::BaselineCenter | Align::BaselineRight => {
-            -(pad + scaled.ascent() + line_height * (lines.len() as f32 - 1.0))
+            -(pad + base_scaled.ascent() + line_height * (lines.len() as f32 - 1.0))
         }
     };
     let dx = -pad - (text_w - 2.0 * pad) * horizontal;
