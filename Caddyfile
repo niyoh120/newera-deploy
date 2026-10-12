@@ -9,7 +9,8 @@
 	redir @root /editor/ 302
 
 	# Saved projects handed over from the headless serve (read-only volume)
-	handle /files/* {
+	# handle_path strips the /files prefix: /files/x.newera -> /srv/projects/x.newera
+	handle_path /files/* {
 		root * /srv/projects
 		file_server browse
 	}
