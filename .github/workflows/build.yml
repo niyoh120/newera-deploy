@@ -28,7 +28,18 @@ jobs:
           path: src
 
       - name: Inject deploy files into build context
-        run: cp Caddyfile src/Caddyfile
+        run: |
+          cp Caddyfile src/Caddyfile
+          # Upstream .dockerignore whitelists only manifests+crates; we also need web/ and Caddyfile.
+          cat > src/.dockerignore <<'EOF'
+          *
+          !Cargo.toml
+          !Cargo.lock
+          !crates
+          crates/**/target
+          !web
+          !Caddyfile
+          EOF
 
       - name: Resolve image tag from upstream commit
         id: meta
