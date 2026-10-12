@@ -31,7 +31,7 @@ RUN cargo build --release --locked -p newera-web --target wasm32-unknown-unknown
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates fonts-droid-fallback \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/target/release/newera /usr/local/bin/newera
 COPY --from=build /src/target/release/newera-relay /usr/local/bin/newera-relay
