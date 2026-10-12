@@ -4,6 +4,10 @@
 	@wasm path *.wasm
 	header @wasm Content-Type application/wasm
 
+	# Land directly in the editor
+	@root path /
+	redir @root /editor/ 302
+
 	# Saved projects handed over from the headless serve (read-only volume)
 	handle /files/* {
 		root * /srv/projects

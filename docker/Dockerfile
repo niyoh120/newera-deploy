@@ -41,4 +41,8 @@ CMD ["newera", "serve"]
 
 FROM caddy:2-alpine AS web
 COPY --from=build /src/web /srv/web
+# Default the browser editor's MCP relay to the co-located relay on this same
+# origin instead of the upstream hosted service, so /editor/ works with no params.
+RUN sed -i 's#?? "https://mcp.3dneweraai.com"#?? window.location.origin#' /srv/web/editor/index.html \
+ && grep -q 'window.location.origin' /srv/web/editor/index.html
 COPY Caddyfile /etc/caddy/Caddyfile

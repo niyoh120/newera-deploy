@@ -1,29 +1,64 @@
 # 3D New Era AI on kr-3 (Coolify docker-compose)
-# Images: ghcr.io/niyoh120/newera[:tag] (binaries) + ghcr.io/niyoh120/newera-web[:tag] (editor static)
-# Required env (set in Coolify): NEWERA_TOKEN  (strong random token, headless MCP auth)
-# Domains are attached per-service by Coolify (--compose-domain); Traefik labels are Coolify-managed.
+# Single domain, path-routed by Traefik (kr-3 proxy: entrypoints http/https,
+# certresolver letsencrypt with *.niyoh.top wildcard, middleware redirect-to-https):
+#   /rooms, /r/*          -> relay (browser-collab MCP)
+#   /mcp, /api/*, /health -> serve (headless MCP + plan/3D render endpoints)
+#   everything else       -> editor (Caddy static, incl. /files/ project alias)
+# Required env (set in Coolify): NEWERA_TOKEN
+
+networks:
+  coolify:
+    external: true
 
 services:
   editor:
     image: ghcr.io/niyoh120/newera-web:latest
     restart: unless-stopped
+    networks: [coolify]
     volumes:
       - /data/app/newera/projects:/srv/projects:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.newera-editor.rule=Host(`newera.niyoh.top`)
+      - traefik.http.routers.newera-editor.entrypoints=https
+      - traefik.http.routers.newera-editor.tls.certresolver=letsencrypt
+      - traefik.http.routers.newera-editor.priority=1
+      - traefik.http.routers.newera-editor-http.rule=Host(`newera.niyoh.top`)
+      - traefik.http.routers.newera-editor-http.entrypoints=http
+      - traefik.http.routers.newera-editor-http.middlewares=redirect-to-https@docker
+      - traefik.http.routers.newera-editor-http.priority=1
+      - traefik.http.services.newera-editor.loadbalancer.server.port=80
 
   relay:
     image: ghcr.io/niyoh120/newera:latest
     command: ["newera-relay"]
     restart: unless-stopped
+    networks: [coolify]
     environment:
       PORT: "8080"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.newera-relay.rule=Host(`newera.niyoh.top`) && (PathPrefix(`/rooms`) || PathPrefix(`/r/`))
+      - traefik.http.routers.newera-relay.entrypoints=https
+      - traefik.http.routers.newera-relay.tls.certresolver=letsencrypt
+      - traefik.http.routers.newera-relay.priority=100
+      - traefik.http.services.newera-relay.loadbalancer.server.port=8080
 
   serve:
     image: ghcr.io/niyoh120/newera:latest
     command: ["newera", "serve", "--addr", "0.0.0.0:7878"]
     restart: unless-stopped
+    networks: [coolify]
     environment:
       NEWERA_TOKEN: ${NEWERA_TOKEN:?NEWERA_TOKEN must be set in Coolify environment}
       NEWERA_TELEMETRY: "0"
       NEWERA_RENDER_THREADS: "2"
     volumes:
       - /data/app/newera/projects:/data/projects
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.newera-serve.rule=Host(`newera.niyoh.top`) && (Path(`/mcp`) || PathPrefix(`/api/`) || Path(`/health`))
+      - traefik.http.routers.newera-serve.entrypoints=https
+      - traefik.http.routers.newera-serve.tls.certresolver=letsencrypt
+      - traefik.http.routers.newera-serve.priority=100
+      - traefik.http.services.newera-serve.loadbalancer.server.port=7878
