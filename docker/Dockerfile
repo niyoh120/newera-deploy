@@ -18,6 +18,7 @@ WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY web ./web
+COPY assets ./assets
 
 # Native binaries (aarch64 natively on GH arm runners, x64 on x64 runners)
 RUN cargo build --release --locked -p newera -p newera-relay

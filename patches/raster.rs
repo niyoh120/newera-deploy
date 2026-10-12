@@ -99,6 +99,34 @@ pub fn render_png(
         .map_err(|e| RenderError::Encode(e.to_string()))
 }
 
+/// CJK font bytes: embedded into the WASM build (no filesystem in the
+/// browser), read from the system font directory on native targets.
+/// (deploy patch — the font file is placed at crates/../assets/cjk-fallback.ttf)
+fn cjk_font_data() -> Vec<u8> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        include_bytes!("../../../assets/cjk-fallback.ttf").to_vec()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        fn walk(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+            let Ok(rd) = std::fs::read_dir(dir) else { return };
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    walk(&p, out);
+                } else if matches!(p.extension().and_then(|e| e.to_str()), Some("ttf") | Some("ttc") | Some("otf")) {
+                    out.push(p);
+                }
+            }
+        }
+        let mut found = Vec::new();
+        walk(Path::new("/usr/share/fonts"), &mut found);
+        found.sort();
+        found.first().and_then(|f| std::fs::read(f).ok()).unwrap_or_default()
+    }
+}
+
 /// Two fonts: the bundled Latin one, plus a system CJK font when present.
 /// Each character is drawn by the first font that actually has its glyph,
 /// so mixed labels ("主卧B 17.8㎡") render whole. (deploy patch)
@@ -145,27 +173,8 @@ pub fn render_pixmap(
     let base: FontRef<'static> =
         FontRef::try_from_slice(epaint_default_fonts::UBUNTU_LIGHT).expect("bundled font is valid");
     static CJK_FONT: OnceLock<Vec<u8>> = OnceLock::new();
-    let cjk_font: Option<FontRef<'static>> = FontRef::try_from_slice_and_index(
-        CJK_FONT.get_or_init(|| {
-            fn walk(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
-                let Ok(rd) = std::fs::read_dir(dir) else { return };
-                for e in rd.flatten() {
-                    let p = e.path();
-                    if p.is_dir() {
-                        walk(&p, out);
-                    } else if matches!(p.extension().and_then(|e| e.to_str()), Some("ttf") | Some("ttc") | Some("otf")) {
-                        out.push(p);
-                    }
-                }
-            }
-            let mut found = Vec::new();
-            walk(Path::new("/usr/share/fonts"), &mut found);
-            found.sort();
-            found.first().and_then(|f| std::fs::read(f).ok()).unwrap_or_default()
-        }),
-        0,
-    )
-    .ok();
+    let cjk_font: Option<FontRef<'static>> =
+        FontRef::try_from_slice_and_index(CJK_FONT.get_or_init(cjk_font_data), 0).ok();
     let fonts = Fonts { base: &base, cjk: cjk_font.as_ref() };
     let mut images: HashMap<String, Option<Pixmap>> = HashMap::new();
 

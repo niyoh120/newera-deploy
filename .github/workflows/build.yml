@@ -39,7 +39,14 @@ jobs:
           crates/**/target
           !web
           !Caddyfile
+          !assets
           EOF
+
+      - name: Stage CJK font for WASM embedding
+        run: |
+          sudo apt-get install -y --no-install-recommends fonts-droid-fallback
+          mkdir -p src/assets
+          cp /usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf src/assets/cjk-fallback.ttf
 
       - name: Overlay patched raster.rs (per-glyph Latin/CJK font fallback)
         run: cp patches/raster.rs src/crates/newera-draw/src/raster.rs
