@@ -57,7 +57,7 @@ services:
       - /data/app/newera/projects:/data/projects
     labels:
       - traefik.enable=true
-      - traefik.http.routers.newera-serve.rule=(Host(`newera.niyoh.top`) && (Path(`/mcp`) || PathPrefix(`/api/`) || Path(`/health`))) || Host(`newera-direct.niyoh.top`)
+      - traefik.http.routers.newera-serve.rule=(Host(`newera.niyoh.top`) && (Path(`/mcp`) || PathPrefix(`/api/`) || Path(`/health`))) || Host(`newera-mcp.niyoh.top`)
       - traefik.http.routers.newera-serve.entrypoints=https
       - traefik.http.routers.newera-serve.tls.certresolver=letsencrypt
       - traefik.http.routers.newera-serve.priority=100
