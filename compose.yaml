@@ -1,0 +1,28 @@
+# 3D New Era AI on kr-3 (Coolify docker-compose)
+# Images: ghcr.io/niyoh120/newera[:tag] (binaries) + ghcr.io/niyoh120/newera-web[:tag] (editor static)
+# Required env (set in Coolify): NEWERA_TOKEN  (strong random token, headless MCP auth)
+
+services:
+  editor:
+    image: ghcr.io/niyoh120/newera-web:latest
+    restart: unless-stopped
+    volumes:
+      - /data/app/newera/projects:/srv/projects:ro
+
+  relay:
+    image: ghcr.io/niyoh120/newera:latest
+    command: ["newera-relay"]
+    environment:
+      PORT: "8080"
+    restart: unless-stopped
+
+  serve:
+    image: ghcr.io/niyoh120/newera:latest
+    command: ["newera", "serve", "--addr", "0.0.0.0:7878"]
+    environment:
+      NEWERA_TOKEN: ${NEWERA_TOKEN:?NEWERA_TOKEN must be set in Coolify environment}
+      NEWERA_TELEMETRY: "0"
+      NEWERA_RENDER_THREADS: "2"
+    volumes:
+      - /data/app/newera/projects:/data/projects
+    restart: unless-stopped

@@ -1,0 +1,17 @@
+:80 {
+	encode zstd gzip
+
+	@wasm path *.wasm
+	header @wasm Content-Type application/wasm
+
+	# Saved projects handed over from the headless serve (read-only volume)
+	handle /files/* {
+		root * /srv/projects
+		file_server browse
+	}
+
+	handle {
+		root * /srv/web
+		file_server
+	}
+}

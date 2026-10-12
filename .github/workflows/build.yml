@@ -1,0 +1,69 @@
+name: build-images
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Upstream tag/branch to build (leandrodaf/3d-new-era-ai)"
+        default: main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  OWNER: niyoh120
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout upstream source
+        uses: actions/checkout@v4
+        with:
+          repository: leandrodaf/3d-new-era-ai
+          ref: ${{ inputs.upstream_ref || 'main' }}
+          path: src
+
+      - name: Inject deploy files into build context
+        run: cp Caddyfile src/Caddyfile
+
+      - name: Resolve image tag from upstream commit
+        id: meta
+        run: echo "short=$(git -C src rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push runtime image (newera + newera-relay)
+        uses: docker/build-push-action@v6
+        with:
+          context: src
+          file: docker/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ghcr.io/${{ env.OWNER }}/newera:latest
+            ghcr.io/${{ env.OWNER }}/newera:${{ steps.meta.outputs.short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push web image (browser editor)
+        uses: docker/build-push-action@v6
+        with:
+          context: src
+          file: docker/Dockerfile
+          target: web
+          push: true
+          tags: |
+            ghcr.io/${{ env.OWNER }}/newera-web:latest
+            ghcr.io/${{ env.OWNER }}/newera-web:${{ steps.meta.outputs.short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
