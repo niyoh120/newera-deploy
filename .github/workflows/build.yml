@@ -41,8 +41,8 @@ jobs:
           !Caddyfile
           EOF
 
-      - name: Patch in CJK font support (plan PNG text)
-        run: python3 patches/cjk_font.py src
+      - name: Overlay patched raster.rs (per-glyph Latin/CJK font fallback)
+        run: cp patches/raster.rs src/crates/newera-draw/src/raster.rs
 
       - name: Resolve image tag from upstream commit
         id: meta
